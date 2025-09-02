@@ -1,0 +1,12 @@
+# Maven
+target/
+.idea/
+*.iml
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node, if any front-end accidentally added
+node_modules/
