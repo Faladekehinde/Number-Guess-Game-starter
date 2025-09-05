@@ -7,7 +7,7 @@ pipeline {
   }
 
   environment {
-    DOCKER_IMAGE = "yourdockerhub/number-guess-game"
+    DOCKER_IMAGE = "faladekehinde/number-guess-game"
     DOCKERHUB = credentials('dockerhub-creds') // add in Jenkins Credentials
   }
 
