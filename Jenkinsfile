@@ -59,7 +59,7 @@ pipeline {
         sh '''
           docker rm -f number-guess-game || true
           docker pull ${DOCKER_IMAGE}:latest
-          docker run -d --name number-guess-game -p 8080:8080 ${DOCKER_IMAGE}:latest
+          docker run -d --name number-guess-game -p 9090:8080 ${DOCKER_IMAGE}:latest
         '''
       }
     }
