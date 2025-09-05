@@ -67,7 +67,7 @@ pipeline {
 
   post {
     success {
-      echo "Deployed! Open http://<your-server-ip>:8080/"
+      echo "Deployed! Open http://<your-server-ip>:9090/"
     }
     failure {
       echo "Build failed. Check the logs above."
