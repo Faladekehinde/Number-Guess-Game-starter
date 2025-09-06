@@ -9,6 +9,7 @@ pipeline {
   environment {
     DOCKER_IMAGE = "faladekehinde/number-guess-game"
     DOCKERHUB   = credentials('dockerhub-creds') // add in Jenkins Credentials
+    SONARQUBE_AUTH_TOKEN = credentials('sonar-token')
   }
 
   options {
