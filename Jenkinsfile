@@ -1,71 +1,90 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        SONARQUBE_TOKEN = credentials('SONARQUBE_TOKEN') // Replace with your actual Jenkins credential ID
-        DOCKERHUB      = credentials('DOCKERHUB_USER')   // Docker Hub username
-        DOCKERHUB_PSW  = credentials('DOCKERHUB_PSW')    // Docker Hub password
+  tools {
+    jdk 'JDK17'          // Manage Jenkins > Global Tool Configuration
+    maven 'Maven3'       // Name your Maven installation 'Maven3'
+  }
+
+  environment {
+    DOCKER_IMAGE = "faladekehinde/number-guess-game"
+    DOCKERHUB   = credentials('dockerhub-creds')
+    SONARQUBE_AUTH_TOKEN = credentials('sonar-token')   // <-- your SonarQube token
+  }
+
+  options {
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+  }
+
+  triggers {
+    // Use a GitHub webhook if possible; this is a fallback
+    pollSCM('H/5 * * * *')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    tools {
-        maven 'Maven3'  // Make sure your Jenkins Maven tool name matches
-        JDK 'Java17'    // Make sure your Jenkins JDK tool name matches
+    stage('Build & Test') {
+      steps {
+        sh 'mvn -B -ntp clean verify'
+      }
+      post {
+        always {
+          junit 'target/surefire-reports/*.xml'
+          archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+        }
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('MySonarQube') {  // Name you set in SonarQube config
+          sh """
+            mvn sonar:sonar \
+              -Dsonar.projectKey=NumberGuessGame \
+              -Dsonar.host.url=http://localhost:9000 \
+              -Dsonar.login=${SONARQUBE_AUTH_TOKEN}
+          """
         }
-
-        stage('Build & Test') {
-            steps {
-                sh 'mvn clean verify jacoco:report'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                    jacoco execPattern: '**/target/jacoco.exec'
-                }
-            }
-        }
-
-        stage('Code Quality (SonarQube)') {
-            steps {
-                withSonarQubeEnv('SonarQubeServer') { // Replace with your SonarQube server name in Jenkins
-                    sh 'mvn sonar:sonar -Dsonar.login=$SONARQUBE_TOKEN'
-                }
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                sh 'docker build -t $DOCKERHUB/number-guess-game:latest .'
-            }
-        }
-
-        stage('Docker Push') {
-            steps {
-                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                    sh 'docker push $DOCKERHUB/number-guess-game:latest'
-                }
-            }
-        }
-
-        stage('Deploy (Local Docker)') {
-            steps {
-                sh 'docker run -d -p 8080:8080 --name number-guess-game $DOCKERHUB/number-guess-game:latest'
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Build failed. Check logs above.'
-        }
+    stage('Docker Build') {
+      steps {
+        sh 'docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -t ${DOCKER_IMAGE}:latest .'
+      }
     }
+
+    stage('Docker Push') {
+      steps {
+        sh 'echo "${DOCKERHUB_PSW}" | docker login -u "${DOCKERHUB_USR}" --password-stdin'
+        sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+        sh 'docker push ${DOCKER_IMAGE}:latest'
+      }
+    }
+
+    stage('Deploy (Local Docker)') {
+      steps {
+        sh '''
+          docker rm -f number-guess-game || true
+          docker pull ${DOCKER_IMAGE}:latest
+          docker run -d --name number-guess-game -p 9090:8080 ${DOCKER_IMAGE}:latest
+        '''
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Deployed! Open http://<your-server-ip>:9090/"
+    }
+    failure {
+      echo "Build failed. Check the logs above."
+    }
+  }
 }
