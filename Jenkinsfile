@@ -28,19 +28,24 @@ pipeline {
       }
     }
 
-    stage('Build & Test + Coverage') {
+    stage('Build & Test') {
       steps {
         sh 'mvn -B -ntp clean verify jacoco:report'
       }
       post {
         always {
           junit 'target/surefire-reports/*.xml'
-          jacoco execPattern: 'target/jacoco.exec',
-                 classPattern: 'target/classes',
-                 sourcePattern: 'src/main/java',
-                 inclusionPattern: '**/*.class'
           archiveArtifacts artifacts: 'target/*.war', fingerprint: true
         }
+      }
+    }
+
+    stage('Code Coverage') {
+      steps {
+        recordCoverage(
+          tools: [jacoco(pattern: 'target/site/jacoco/jacoco.xml')],
+          sourceCodeRetention: 'EVERY_BUILD'
+        )
       }
     }
 
