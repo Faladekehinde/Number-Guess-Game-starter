@@ -8,8 +8,8 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "faladekehinde/number-guess-game"
-    DOCKERHUB   = credentials('dockerhub-creds') // add in Jenkins Credentials
-    SONARQUBE_AUTH_TOKEN = credentials('sonar-token')
+    DOCKERHUB = credentials('dockerhub-creds') // add in Jenkins Credentials
+    SONARQUBE_TOKEN = credentials('sonar-token') // SonarQube token ID
   }
 
   options {
@@ -18,8 +18,7 @@ pipeline {
   }
 
   triggers {
-    // Use a GitHub webhook if possible; this is a fallback
-    pollSCM('H/5 * * * *')
+    pollSCM('H/5 * * * *') // fallback, use GitHub webhook if possible
   }
 
   stages {
@@ -29,13 +28,17 @@ pipeline {
       }
     }
 
-    stage('Build & Test') {
+    stage('Build & Test + Coverage') {
       steps {
-        sh 'mvn -B -ntp clean verify'
+        sh 'mvn -B -ntp clean verify jacoco:report'
       }
       post {
         always {
           junit 'target/surefire-reports/*.xml'
+          jacoco execPattern: 'target/jacoco.exec',
+                 classPattern: 'target/classes',
+                 sourcePattern: 'src/main/java',
+                 inclusionPattern: '**/*.class'
           archiveArtifacts artifacts: 'target/*.war', fingerprint: true
         }
       }
@@ -43,12 +46,13 @@ pipeline {
 
     stage('SonarQube Analysis') {
       steps {
-        withSonarQubeEnv('MySonarQube') {  // Name you set in SonarQube config
+        withSonarQubeEnv('MySonarQube') { // match name in Jenkins SonarQube config
           sh """
             mvn sonar:sonar \
               -Dsonar.projectKey=NumberGuessGame \
               -Dsonar.host.url=http://localhost:9000 \
-              -Dsonar.login=${SONARQUBE_AUTH_TOKEN}
+              -Dsonar.login=${SONARQUBE_TOKEN} \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
           """
         }
       }
@@ -81,10 +85,10 @@ pipeline {
 
   post {
     success {
-      echo "Deployed! Open http://<your-server-ip>:9090/"
+      echo "✅ Deployed! Open http://<your-server-ip>:9090/NumberGuessGame"
     }
     failure {
-      echo "Build failed. Check the logs above."
+      echo "❌ Build failed. Check the logs above."
     }
   }
 }
