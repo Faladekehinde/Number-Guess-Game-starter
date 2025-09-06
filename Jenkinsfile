@@ -48,7 +48,7 @@ pipeline {
             mvn sonar:sonar \
               -Dsonar.projectKey=NumberGuessGame \
               -Dsonar.host.url=http://localhost:9000 \
-              -Dsonar.login=${SONARQUBE_AUTH_TOKEN}
+              -Dsonar.token=${SONARQUBE_AUTH_TOKEN}
           """
         }
       }
