@@ -2,14 +2,14 @@ pipeline {
   agent any
 
   tools {
-    jdk 'JDK17'          // Manage Jenkins > Global Tool Configuration
-    maven 'Maven3'       // Name your Maven installation 'Maven3'
+    jdk 'JDK17'
+    maven 'Maven3'
   }
 
   environment {
     DOCKER_IMAGE = "faladekehinde/number-guess-game"
-    DOCKERHUB = credentials('dockerhub-creds') // add in Jenkins Credentials
-    SONARQUBE_TOKEN = credentials('sonar-token') // SonarQube token ID
+    DOCKERHUB = credentials('dockerhub-creds')
+    SONARQUBE_TOKEN = credentials('sonar-token')
   }
 
   options {
@@ -18,7 +18,7 @@ pipeline {
   }
 
   triggers {
-    pollSCM('H/5 * * * *') // fallback, use GitHub webhook if possible
+    pollSCM('H/5 * * * *')
   }
 
   stages {
@@ -51,7 +51,7 @@ pipeline {
 
     stage('SonarQube Analysis') {
       steps {
-        withSonarQubeEnv('MySonarQube') { // match name in Jenkins SonarQube config
+        withSonarQubeEnv('MySonarQube') {
           sh """
             mvn sonar:sonar \
               -Dsonar.projectKey=NumberGuessGame \
