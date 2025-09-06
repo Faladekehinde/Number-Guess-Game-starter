@@ -8,7 +8,7 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "faladekehinde/number-guess-game"
-    DOCKERHUB = credentials('dockerhub-creds') // add in Jenkins Credentials
+    DOCKERHUB   = credentials('dockerhub-creds') // add in Jenkins Credentials
   }
 
   options {
@@ -36,6 +36,19 @@ pipeline {
         always {
           junit 'target/surefire-reports/*.xml'
           archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+        }
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('MySonarQube') {  // Name you set in SonarQube config
+          sh """
+            mvn sonar:sonar \
+              -Dsonar.projectKey=NumberGuessGame \
+              -Dsonar.host.url=http://localhost:9000 \
+              -Dsonar.login=${SONARQUBE_AUTH_TOKEN}
+          """
         }
       }
     }
