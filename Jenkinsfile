@@ -8,7 +8,6 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "faladekehinde/number-guess-game"
-    DOCKERHUB   = credentials('dockerhub-creds')
     SONARQUBE_AUTH_TOKEN = credentials('sonar-token')   // <-- your SonarQube token
   }
 
@@ -62,9 +61,11 @@ pipeline {
 
     stage('Docker Push') {
       steps {
-        sh 'echo "${DOCKERHUB_PSW}" | docker login -u "${DOCKERHUB_USR}" --password-stdin'
-        sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
-        sh 'docker push ${DOCKER_IMAGE}:latest'
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+          sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+          sh 'docker push ${DOCKER_IMAGE}:latest'
+        }
       }
     }
 
